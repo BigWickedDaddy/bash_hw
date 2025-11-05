@@ -1,216 +1,107 @@
 #!/bin/bash
 
-declare -a stack_A=(8 7 6 5 4 3 2 1)
-declare -a stack_B=()
-declare -a stack_C=()
+MAX=8
 
-move_count=0
+A=(8 7 6 5 4 3 2 1)
+B=()
+C=()
 
-sigint_handler() {
-    echo ""
-    echo "Для завершения игры введите 'q' или 'Q'"
+move=1
+goal="8 7 6 5 4 3 2 1"
+
+trap 'echo; echo "Завершить работу можно, введя q или Q.";' INT
+
+print_board() {
+  echo
+  for ((r=MAX-1; r>=0; r--)); do
+    local la=${#A[@]} lb=${#B[@]} lc=${#C[@]}
+    local va=" " vb=" " vc=" "
+    (( r < la )) && va=${A[r]}
+    (( r < lb )) && vb=${B[r]}
+    (( r < lc )) && vc=${C[r]}
+    printf "|%-2s| |%-2s| |%-2s|\n" "$va" "$vb" "$vc"
+  done
+  echo "+-+-+ +-+-+ +-+-+"
+  echo "  A      B     C"
+  echo
+  printf "Ход № %d (откуда, куда): " "$move"
 }
 
-trap sigint_handler SIGINT
 
-display_stacks() {
-    local max_height=${#stack_A[@]}
-    if [ ${#stack_B[@]} -gt $max_height ]; then
-        max_height=${#stack_B[@]}
-    fi
-    if [ ${#stack_C[@]} -gt $max_height ]; then
-        max_height=${#stack_C[@]}
-    fi
-    
-    for ((i=max_height-1; i>=0; i--)); do
-        if [ $i -lt ${#stack_A[@]} ]; then
-            printf "|%d|" "${stack_A[$i]}"
-        else
-            printf "| |"
-        fi
-        
-        printf "\t"
-        
-        if [ $i -lt ${#stack_B[@]} ]; then
-            printf "|%d|" "${stack_B[$i]}"
-        else
-            printf "| |"
-        fi
-        
-        printf "\t"
-        
-        if [ $i -lt ${#stack_C[@]} ]; then
-            printf "|%d|" "${stack_C[$i]}"
-        else
-            printf "| |"
-        fi
-        
-        echo ""
-    done
-    
-    echo "+-+	+-+	+-+"
-    echo " A 	 B 	 C "
+top_of() {
+  case $1 in
+    a) (( ${#A[@]} )) && echo "${A[$((${#A[@]}-1))]}" || echo 99 ;;
+    b) (( ${#B[@]} )) && echo "${B[$((${#B[@]}-1))]}" || echo 99 ;;
+    c) (( ${#C[@]} )) && echo "${C[$((${#C[@]}-1))]}" || echo 99 ;;
+  esac
 }
 
-peek_stack() {
-    local stack_name=$1
-    local -n stack="stack_$stack_name"
-    
-    if [ ${#stack[@]} -eq 0 ]; then
-        echo -1
-    else
-        echo "${stack[-1]}"
-    fi
+POPVAL=
+pop_from() {
+  local len idx
+  case $1 in
+    a) len=${#A[@]}; ((len==0)) && return 1; idx=$((len-1)); POPVAL=${A[$idx]}; unset A[$idx]; A=("${A[@]}");;
+    b) len=${#B[@]}; ((len==0)) && return 1; idx=$((len-1)); POPVAL=${B[$idx]}; unset B[$idx]; B=("${B[@]}");;
+    c) len=${#C[@]}; ((len==0)) && return 1; idx=$((len-1)); POPVAL=${C[$idx]}; unset C[$idx]; C=("${C[@]}");;
+  esac
+  return 0
 }
 
-pop_stack() {
-    local stack_name=$1
-    local -n stack="stack_$stack_name"
-    
-    if [ ${#stack[@]} -eq 0 ]; then
-        return 1
-    fi
-    
-    local value="${stack[-1]}"
-    unset 'stack[-1]'
-    echo "$value"
-    return 0
+push_to() {
+  case $1 in
+    a) A+=("$2");;
+    b) B+=("$2");;
+    c) C+=("$2");;
+  esac
 }
 
-push_stack() {
-    local stack_name=$1
-    local value=$2
-    local -n stack="stack_$stack_name"
-    
-    stack+=("$value")
+arr_to_string() {
+  case $1 in
+    a) echo "${A[*]}";;
+    b) echo "${B[*]}";;
+    c) echo "${C[*]}";;
+  esac
 }
-
-check_win() {
-    local win_sequence=(8 7 6 5 4 3 2 1)
-    
-    if [ ${#stack_B[@]} -eq 8 ]; then
-        local match=1
-        for ((i=0; i<8; i++)); do
-            if [ "${stack_B[$i]}" -ne "${win_sequence[$i]}" ]; then
-                match=0
-                break
-            fi
-        done
-        if [ $match -eq 1 ]; then
-            return 0
-        fi
-    fi
-    
-    if [ ${#stack_C[@]} -eq 8 ]; then
-        local match=1
-        for ((i=0; i<8; i++)); do
-            if [ "${stack_C[$i]}" -ne "${win_sequence[$i]}" ]; then
-                match=0
-                break
-            fi
-        done
-        if [ $match -eq 1 ]; then
-            return 0
-        fi
-    fi
-    
-    return 1
-}
-
-validate_stack_name() {
-    local name=$1
-    name=$(echo "$name" | tr '[:lower:]' '[:upper:]')
-    
-    if [ "$name" = "A" ] || [ "$name" = "B" ] || [ "$name" = "C" ]; then
-        echo "$name"
-        return 0
-    fi
-    
-    return 1
-}
-
-echo "=== Ханойская башня (Tower of Hanoi) ==="
-echo ""
 
 while true; do
-    ((move_count++))
-    
-    echo "Ход № $move_count"
-    echo ""
-    display_stacks
-    echo ""
-    
-    echo -n "Ход № $move_count (откуда, куда): "
-    read user_input
-    
-    user_input_upper=$(echo "$user_input" | tr '[:lower:]' '[:upper:]')
-    if [ "$user_input_upper" = "Q" ]; then
-        echo "Выход из игры."
-        exit 1
+  print_board
+  IFS= read -r line || exit 1
+  norm=$(printf "%s" "$line" | tr -d ' ' | tr '[:upper:]' '[:lower:]')
+
+  if [[ "$norm" == "q" ]]; then
+    echo "Выход по запросу пользователя."
+    exit 1
+  fi
+
+  if [[ "$norm" =~ ^([abc])([abc])$ ]]; then
+    from=${BASH_REMATCH[1]}
+    to=${BASH_REMATCH[2]}
+    if [[ "$from" == "$to" ]]; then
+      echo "Нужно указать разные стеки."
+      continue
     fi
-    
-    parsed_input=$(echo "$user_input" | tr -d ' ,;:')
-    
-    if [ ${#parsed_input} -ne 2 ]; then
-        echo "Такое перемещение запрещено!"
-        echo ""
-        ((move_count--))
-        continue
+
+    if ! pop_from "$from"; then
+      echo "Стек '${from^^}' пуст."
+      continue
     fi
-    
-    from_stack="${parsed_input:0:1}"
-    to_stack="${parsed_input:1:1}"
-    
-    from_stack=$(echo "$from_stack" | tr '[:lower:]' '[:upper:]')
-    to_stack=$(echo "$to_stack" | tr '[:lower:]' '[:upper:]')
-    
-    if ! validate_stack_name "$from_stack" > /dev/null 2>&1; then
-        echo "Такое перемещение запрещено!"
-        echo ""
-        ((move_count--))
-        continue
+
+    top_to=$(top_of "$to")
+    if (( POPVAL > top_to )); then
+      echo "Такое перемещение запрещено!"
+      push_to "$from" "$POPVAL"   # откатываем
+      continue
     fi
-    
-    if ! validate_stack_name "$to_stack" > /dev/null 2>&1; then
-        echo "Такое перемещение запрещено!"
-        echo ""
-        ((move_count--))
-        continue
+
+    push_to "$to" "$POPVAL"
+    ((move++))
+
+    if [[ "$(arr_to_string b)" == "$goal" || "$(arr_to_string c)" == "$goal" ]]; then
+      print_board
+      echo "Победа!"
+      exit 0
     fi
-    
-    if [ "$from_stack" = "$to_stack" ]; then
-        echo "Такое перемещение запрещено!"
-        echo ""
-        ((move_count--))
-        continue
-    fi
-    
-    from_top=$(peek_stack "$from_stack")
-    to_top=$(peek_stack "$to_stack")
-    
-    if [ $from_top -eq -1 ]; then
-        echo "Такое перемещение запрещено!"
-        echo ""
-        ((move_count--))
-        continue
-    fi
-    
-    if [ $to_top -ne -1 ] && [ $from_top -gt $to_top ]; then
-        echo "Такое перемещение запрещено!"
-        echo ""
-        ((move_count--))
-        continue
-    fi
-    
-    value=$(pop_stack "$from_stack")
-    push_stack "$to_stack" "$value"
-    
-    echo ""
-    
-    if check_win; then
-        echo "Поздравляем! Вы решили головоломку за $move_count ходов!"
-        echo ""
-        display_stacks
-        exit 0
-    fi
+  else
+    echo "Ошибка ввода. Примеры: A C, ac, bA, или q."
+  fi
 done
