@@ -1,0 +1,23 @@
+chmod +x guess_game.sh
+chmod +x bulls-and-cows.sh
+chmod +x 15puzzle.sh
+chmod +x tower-of-hanoi.sh
+chmod +x mkarch.sh
+chmod +x massexec.sh
+chmod +x chsuf.sh
+chmod +x stsuf.sh
+chmod +x addline.sh
+
+./guess_game.sh
+./bulls-and-cows.sh
+./15puzzle.sh
+./tower-of-hanoi.sh
+
+./mkarch.sh
+./mkarch.sh -d ./testdata -n logarch01
+./logarch01 -o /tmp    
+
+./massexec.sh
+./chsuf.sh
+./stsuf.sh
+./addline.sh

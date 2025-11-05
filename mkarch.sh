@@ -43,7 +43,9 @@ if [ ! -d "$dir_path" ]; then
     exit 1
 fi
 
-temp_archive=$(mktemp /tmp/archive.XXXXXX.tar.gz)
+# temp_archive=$(mktemp /tmp/archive.XXXXXX.tar.gz)
+temp_archive="$(mktemp -t mkarch.XXXXXX)"; temp_archive="${temp_archive}.tar.gz"
+
 tar -czf "$temp_archive" -C "$(dirname "$dir_path")" "$(basename "$dir_path")" 2>/dev/null
 
 if [ $? -ne 0 ]; then
@@ -98,9 +100,8 @@ extract_archive "$output_dir"
 __ARCHIVE_BELOW__
 SCRIPT_HEADER
 
-base64 "$temp_archive" >> "$name"
-
-rm -f "$temp_archive"
+# base64 "$temp_archive" >> "$name"
+base64 < "$temp_archive" >> "$name"
 
 chmod a+x "$name"
 
