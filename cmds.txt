@@ -18,6 +18,18 @@ chmod +x addline.sh
 ./logarch01 -o /tmp    
 
 ./massexec.sh
+
 ./chsuf.sh
+mkdir -p /tmp/chsuf_case/sub
+touch /tmp/chsuf_case/file1.txt
+touch /tmp/chsuf_case/file2.txt.txt
+touch "/tmp/chsuf_case/file 3.txt - 1"
+touch /tmp/chsuf_case/.txt       
+touch /tmp/chsuf_case/..txt
+touch /tmp/chsuf_case/sub/note.1.txt
+find /tmp/chsuf_case -type f -print
+./chsuf.sh /tmp/chsuf_case .txt .md
+
+
 ./stsuf.sh
 ./addline.sh
