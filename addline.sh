@@ -1,28 +1,45 @@
 #!/bin/bash
 
+
 usage() {
-    echo "Usage: $0 <directory>"
-    echo "  directory : path to directory (required)"
+    echo "Usage:"
+    echo "  $0 <directory>"
+    echo "  $0 --dir <directory>"
     echo ""
-    echo "Example: $0 /home/user/documents"
+    echo "Examples:"
+    echo "  $0 /path/to/dir"
+    echo "  $0 --dir /path/to/dir"
     exit 1
 }
-
-if [ $# -ne 1 ]; then
-    echo "Error: Expected 1 argument, got $#"
-    usage
+directory=""
+if [[ $# -eq 1 && "$1" != --* ]]; then
+    directory="$1"
+else
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --dir) directory="$2"; shift 2 ;;
+            -h|--help) usage ;;
+            *) echo "Error: unknown option $1"; usage ;;
+        esac
+    done
 fi
 
-directory="$1"
-
-if [ ! -d "$directory" ]; then
+if [[ -z "$directory" ]]; then
+    echo "Error: directory is required"
+    usage
+fi
+if [[ ! -d "$directory" ]]; then
     echo "Error: '$directory' is not a directory or does not exist"
     exit 1
 fi
 
-username="$USER"
+username="${USER:-$(id -un 2>/dev/null)}"
 
-current_date=$(date -I)
+if date -I >/dev/null 2>&1; then
+    current_date="$(date -I)"
+else
+    current_date="$(date '+%Y-%m-%d')"
+fi
 
 approval_line="Approved $username $current_date"
 
@@ -31,35 +48,40 @@ echo "Approval line: $approval_line"
 echo ""
 
 processed_count=0
+found_any=0
+
+shopt -s nullglob
 
 for filepath in "$directory"/*.txt; do
-    if [ ! -e "$filepath" ]; then
-        echo "No .txt files found in '$directory'"
-        break
-    fi
-    
-    if [ ! -f "$filepath" ]; then
-        continue
-    fi
-    
+    found_any=1
+
+    [[ -f "$filepath" ]] || continue
+
     filename=$(basename "$filepath")
-    
-    temp_file=$(mktemp)
-    
-    echo "$approval_line" > "$temp_file"
-    
-    cat "$filepath" >> "$temp_file"
-    
-    mv "$temp_file" "$filepath"
-    
-    if [ $? -eq 0 ]; then
+
+    temp_file="${filepath}.addline.tmp.$$"
+
+    {
+        printf "%s\n" "$approval_line"
+        cat "$filepath"
+    } > "$temp_file" || {
+        echo "Error: failed to write temp file for '$filename'"
+        continue
+    }
+
+    if mv -- "$temp_file" "$filepath"; then
         echo "Processed: $filename"
         ((processed_count++))
     else
-        echo "Error: Failed to process '$filename'"
-        rm -f "$temp_file"
+        echo "Error: failed to replace '$filename' with temp file"
     fi
 done
+
+shopt -u nullglob
+
+if [[ $found_any -eq 0 ]]; then
+    echo "No .txt files found in '$directory'"
+fi
 
 echo ""
 echo "Total files processed: $processed_count"

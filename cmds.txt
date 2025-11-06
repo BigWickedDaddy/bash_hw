@@ -38,3 +38,9 @@ touch /tmp/stsuf_case/a.txt /tmp/stsuf_case/b.pdf /tmp/stsuf_case/.txt /tmp/stsu
 
 
 ./addline.sh
+mkdir -p /tmp/addline_case
+printf 'alpha\n' > /tmp/addline_case/a.txt
+printf 'beta\n'  > /tmp/addline_case/b.txt
+./addline.sh /tmp/addline_case
+head -3 /tmp/addline_case/a.txt
+head -3 /tmp/addline_case/b.txt
