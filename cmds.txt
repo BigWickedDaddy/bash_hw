@@ -32,4 +32,9 @@ find /tmp/chsuf_case -type f -print
 
 
 ./stsuf.sh
+mkdir -p /tmp/stsuf_case/sub
+touch /tmp/stsuf_case/a.txt /tmp/stsuf_case/b.pdf /tmp/stsuf_case/.txt /tmp/stsuf_case/..txt /tmp/stsuf_case/sub/x.1.txt "tmp/stsuf_case/with space.txt - 1"
+./stsuf.sh /tmp/stsuf_case
+
+
 ./addline.sh

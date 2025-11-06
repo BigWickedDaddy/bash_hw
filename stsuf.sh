@@ -1,33 +1,36 @@
 #!/bin/bash
 
 usage() {
-    echo "Usage: $0 <directory>"
-    echo "  directory : path to directory (required)"
+    echo "Usage:"
+    echo "  $0 <directory>"
+    echo "  $0 --dir <directory>"
     echo ""
-    echo "Example: $0 /home/user/documents"
+    echo "Example:"
+    echo "  $0 /home/user/docs"
+    echo "  $0 --dir /home/user/docs"
     exit 1
 }
 
 get_suffix() {
     local filename="$1"
-    
+
     if [[ "$filename" == .* ]]; then
-        local temp="${filename#.}"
-        
-        if [ -z "$temp" ]; then
+        local rest="${filename#.}"
+
+        if [[ -z "$rest" ]]; then
             echo "no suffix"
             return
         fi
-        
-        if [[ "$temp" == *.* ]]; then
-            echo ".${temp##*.}"
+
+        if [[ "$rest" == *.* ]]; then
+            echo ".${rest##*.}"
             return
         else
             echo "no suffix"
             return
         fi
     fi
-    
+
     if [[ "$filename" == *.* ]]; then
         echo ".${filename##*.}"
     else
@@ -35,45 +38,47 @@ get_suffix() {
     fi
 }
 
-if [ $# -ne 1 ]; then
-    echo "Error: Expected 1 argument, got $#"
+dir=""
+
+if [[ $# -eq 1 && "$1" != --* ]]; then
+    dir="$1"
+else
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --dir) dir="$2"; shift 2 ;;
+            -h|--help) usage ;;
+            *) echo "Error: unknown option $1"; usage ;;
+        esac
+    done
+fi
+
+if [[ -z "$dir" ]]; then
+    echo "Error: directory is required"
     usage
 fi
 
-directory="$1"
-
-if [ ! -d "$directory" ]; then
-    echo "Error: '$directory' is not a directory or does not exist"
+if [[ ! -d "$dir" ]]; then
+    echo "Error: '$dir' is not a directory or does not exist"
     exit 1
 fi
 
 declare -A suffix_count
 
-echo "Analyzing files in '$directory'..."
-echo ""
+while IFS= read -r -d '' fp; do
+    fname=$(basename "$fp")
+    suf=$(get_suffix "$fname")
+    ((suffix_count["$suf"]++))
+done < <(find "$dir" -type f -print0)
 
-while IFS= read -r -d '' filepath; do
-    filename=$(basename "$filepath")
-    
-    suffix=$(get_suffix "$filename")
-    
-    if [ -n "${suffix_count[$suffix]}" ]; then
-        ((suffix_count[$suffix]++))
-    else
-        suffix_count[$suffix]=1
-    fi
-done < <(find "$directory" -type f -print0)
-
-if [ ${#suffix_count[@]} -eq 0 ]; then
-    echo "No files found in '$directory'"
+if [[ ${#suffix_count[@]} -eq 0 ]]; then
+    echo "No files found in '$dir'"
     exit 0
 fi
 
-echo "File suffix statistics:"
-echo ""
-
-for suffix in "${!suffix_count[@]}"; do
-    echo "${suffix_count[$suffix]} $suffix"
-done | sort -rn | while read count suffix; do
-    printf "%s: %d\n" "$suffix" "$count"
+{
+    for key in "${!suffix_count[@]}"; do
+        printf "%d\t%s\n" "${suffix_count[$key]}" "$key"
+    done
+} | sort -rn -k1,1 | while IFS=$'\t' read -r cnt key; do
+    printf "%s: %d\n" "$key" "$cnt"
 done
